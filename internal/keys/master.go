@@ -66,3 +66,18 @@ func DefaultArgon2Params() crypto.Argon2Params {
 		KeyLength: DefaultArgonKeyLength,
 	}
 }
+
+
+/*
+Usage pattern - 
+
+Vault Creation
+rng := crypto.SecureRNG{}
+salt, err := keys.GenerateSalt(rng, 32)
+params := keys.DefaultArgon2Params()
+masterKey, err := keys.DeriveMasterKey(password, salt, params)
+
+Vault Opening
+// params + salt read from header
+masterKey, err := keys.DeriveMasterKey(password, header.KDF.Salt, params)
+*/
