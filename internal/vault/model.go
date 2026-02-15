@@ -18,13 +18,22 @@ const (
 	VaultClean
 )
 
+var allowedTransitions = map[VaultState][]VaultState{
+	VaultClosed:  {VaultOpening},
+	VaultOpening: {VaultOpen, VaultClosed},
+	VaultOpen:    {VaultDirty, VaultClean, VaultClosed},
+	VaultDirty:   {VaultClean, VaultClosed},
+	VaultClean:   {VaultDirty, VaultClosed},
+}
+
+
 type Vault struct {
 	mu sync.Mutex
 
 	state VaultState
 
 	header   *VaultHeader
-	vaultKey []byte
+	vaultKey WrappedVaultKey
 
 	vaultID      string
 	vaultVersion uint64
@@ -61,24 +70,27 @@ func newOpenVault(
 	if err != nil {
 		return nil, err
 	}
-
-	return &Vault{
-		state:        VaultOpen,
+ 
+	vault := &Vault{
+		state:        VaultOpening,
 		header:       header,
-		vaultKey:     vaultKey,
+		vaultKey:     payload.WrappedVaultKey,
 		vaultID:      header.VaultID,
 		vaultVersion: header.VaultVersion,
 		keyEpoch:     header.KeyEpoch,
 		db:           dbConn,
 		dbPath:       tmpFile.Name(),
 		dbBytes:      payload.SQLite.DBBytes,
-	}, nil
+	}
+	if err := vault.transitionTo(VaultOpen); err != nil {
+		return nil, err
+	}
+
+	return vault, nil
 }
 
 func (v *Vault) markDirty() {
-	if v.state == VaultOpen || v.state == VaultClean {
-		v.state = VaultDirty
-	}
+	v.transitionTo(VaultDirty)
 }
 
 func (v *Vault) CanCommit() bool {
@@ -96,7 +108,38 @@ func (v *Vault) Close() error {
 		os.Remove(v.dbPath)
 	}
 
-	v.state = VaultClosed
+	if err := v.transitionTo(VaultClosed); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *Vault) requireState(expected VaultState) error {
+	if v.state != expected {
+		return fmt.Errorf(
+			"vault must be %s (current: %s)",
+			expected,
+			v.state,
+		)
+	}
+	return nil
+}
+
+func (v *Vault) transitionTo(next VaultState) error {
+	current := v.state
+
+	allowed := allowedTransitions[current]
+	for _, s := range allowed {
+		if s == next {
+			v.state = next
+			return nil
+		}
+	}
+
+	return fmt.Errorf(
+		"illegal vault state transition: %s → %s",
+		current,
+		next,
+	)
 }
 

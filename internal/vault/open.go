@@ -14,6 +14,7 @@ type OpenContext struct {
 	LastSeenKeyEpoch     uint64
 }
 
+// represents an open vault
 type OpenVault struct {
 	Header       *VaultHeader
 	Payload      *DecryptedPayload
@@ -22,6 +23,10 @@ type OpenVault struct {
 	KeyEpoch     uint64
 }
 
+/* OpenVaultFile: Opens a vault file
+		args - headerBytes byte[], envelopeBytes byte[], password byte[]
+		returns - *OpenVault, error 
+*/
 func OpenVaultFile(
 	headerBytes []byte,
 	envelopeBytes []byte,
