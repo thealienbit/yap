@@ -1,6 +1,5 @@
 /*
 * RNG - Random number generator
-* This file conntains code related to rng
 * */
 
 package crypto

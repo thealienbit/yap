@@ -1,3 +1,15 @@
+/*
+* AEAD - Authenticated encryption with associated data
+* Ensures -
+* 	1) confidentiality - hides plain text, only those with secret can read
+* 	2) authenticity and integrity - produces a mac or a tag. so even if a single 
+* 		bit of encrypted
+* 	3) associated data (AD) - allows to bind unencrypted metadata to the
+* 		the encyrpterd message, its not hidden but authenticated, i.e. if someone
+* 		tampers with the metadata the whole pacakage is rejected
+*
+* Using chacha20poly1305 for AEAD
+*/
 package crypto
 
 import (
